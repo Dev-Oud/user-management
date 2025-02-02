@@ -52,7 +52,7 @@ public class UserController {
         }
     }
 
-    // Endpoint to deposit money into user's account
+    // Endpoint to deposit money into user's account in all
     @PostMapping(path = "/{username}/deposit")
     public ResponseEntity<String> deposit(@PathVariable String username, @RequestParam double amount) {
         try {
@@ -64,7 +64,7 @@ public class UserController {
         }
     }
 
-    // Endpoint to withdraw money from user's account
+    // Endpoint to withdraw money from user's account in all
     @PostMapping(path = "/{username}/withdraw")
     public ResponseEntity<String> withdraw(@PathVariable String username, @RequestParam double amount) {
         try {
@@ -76,7 +76,7 @@ public class UserController {
         }
     }
 
-    // Endpoint to delete a user's account
+    // Endpoint to delete a user's account in all
     @DeleteMapping(path = "/{username}/delete")
     public ResponseEntity<String> deleteAccount(@PathVariable String username) {
         try {
