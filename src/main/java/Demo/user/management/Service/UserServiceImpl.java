@@ -1,12 +1,18 @@
 package Demo.user.management.Service;
 
 import Demo.user.management.Dto.UserDTO;
+import Demo.user.management.Exceptions.UsernameAlreadyExistsException;
 import Demo.user.management.model.User;
+import jakarta.transaction.Transactional;
 import Demo.user.management.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder; // Import BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,8 +20,16 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final ModelMapper modelMapper; // If using ModelMapper for mapping DTOs
-    private final BCryptPasswordEncoder passwordEncoder; // Inject BCryptPasswordEncoder
+    private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    public List<UserDTO> getAllUsers() {
+        List<User> users = userRepository.findAll(); // Fetch all users from the repository
+        return users.stream()
+                .map(user -> modelMapper.map(user, UserDTO.class)) // Map User to UserDTO
+                .collect(Collectors.toList()); // Return as a list of UserDTO
+    }
 
     @Override
     public UserDTO getUserByUsername(String username) {
@@ -26,12 +40,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDTO registerUser(UserDTO userDTO) {
+        // Check if username already exists
+        if (userRepository.existsByUsername(userDTO.getUsername())) {
+            throw new UsernameAlreadyExistsException(userDTO.getUsername());
+        }
+
+        // Proceed with user registration
         User user = modelMapper.map(userDTO, User.class);
-        
-        // Encode the password before saving
-        String encodedPassword = passwordEncoder.encode(userDTO.getPassword());
-        user.setPassword(encodedPassword); // Set the encoded password
-        
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         user.setAccountNumber(generateAccountNumber());
         user.setBalance(0.0);
 
@@ -40,10 +56,11 @@ public class UserServiceImpl implements UserService {
     }
 
     private String generateAccountNumber() {
-        long number = 1000000000L + (long) (Math.random() * 9000000000L); // Ensures a 10-digit number
+        long number = 1000000000L + (long) (Math.random() * 9000000000L);
         return "" + number;
     }
 
+    @Transactional
     @Override
     public UserDTO depositUserBalance(String username, double amount) {
         User user = userRepository.findByUsername(username)
@@ -54,7 +71,7 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setBalance(user.getBalance() + amount);
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
 
         return modelMapper.map(user, UserDTO.class);
     }
@@ -85,12 +102,31 @@ public class UserServiceImpl implements UserService {
         userRepository.delete(user);
     }
 
-    // Additional method for login validation
     public boolean validateUserLogin(String username, String rawPassword) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        // Compare the raw password with the encoded password stored in the database
         return passwordEncoder.matches(rawPassword, user.getPassword());
+    }
+
+    @Override
+    public void updateUser(String username, UserDTO userDTO) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        // Update user details
+        if (userDTO.getFirstName() != null)
+            user.setFirstName(userDTO.getFirstName());
+        if (userDTO.getLastName() != null)
+            user.setLastName(userDTO.getLastName());
+        if (userDTO.getUsername() != null)
+            user.setUsername(userDTO.getUsername());
+
+        // Handle password update securely
+        if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        }
+
+        userRepository.save(user);
     }
 }

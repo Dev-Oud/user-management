@@ -25,16 +25,18 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable()) // Disable CSRF for stateless API
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/register", "/api/users/login").permitAll() // Public routes
-                        .requestMatchers("/api/users/{username}").authenticated() // User details require authentication
-                        .requestMatchers("/api/users/*/deposit", "/api/users/*/withdraw", "/api/users/*/delete").authenticated() // Require authentication for transactions
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/users/**").authenticated() // Protect user-related routes
+                        .requestMatchers("/api/transaction/**").authenticated() // Protect transaction endpoints
+                        .anyRequest().authenticated() // All other requests require authentication
                 )
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Stateless
+                                                                                                        // session
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class); // Add JWT Filter
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class); // Add JWT
+                                                                                                         // filter
 
         return http.build();
     }
@@ -52,7 +54,7 @@ public class SecurityConfig {
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
+        provider.setUserDetailsService(userDetailsService); // Ensure CustomUserDetailsService is used
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
@@ -61,4 +63,5 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
 }

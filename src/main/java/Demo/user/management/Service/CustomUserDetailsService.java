@@ -1,8 +1,8 @@
 package Demo.user.management.Service;
 
-import Demo.user.management.Dto.UserDTO;
+import Demo.user.management.Repository.UserRepository;
+//import Demo.user.management.model.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -12,19 +12,23 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserService userService;
-
+    private final UserRepository userRepository; 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserDTO userDTO = userService.getUserByUsername(username);
-
-        if (userDTO == null) {
-            throw new UsernameNotFoundException("User not found with username: " + username);
-        }
-
-        return User.withUsername(userDTO.getUsername())
-                .password(userDTO.getPassword()) // Ensure password is already hashed
-                .roles("USER") // Assign role
-                .build();
+        System.out.println("🔍 Searching for user with username: " + username); // Debugging log
+        return userRepository.findByUsername(username)
+                .map(user -> {
+                    System.out.println("✅ User found: " + user.getUsername()); // Confirm if user exists
+                    return org.springframework.security.core.userdetails.User
+                            .withUsername(user.getUsername())
+                            .password(user.getPassword())
+                            .roles("USER") // Customize roles as needed
+                            .build();
+                })
+                .orElseThrow(() -> {
+                   // System.out.println("❌ User not found in the database for username: " + username);
+                    return new UsernameNotFoundException("User not found with username: " + username);
+                });
     }
 }
+    
