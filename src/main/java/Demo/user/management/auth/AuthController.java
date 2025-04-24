@@ -37,7 +37,7 @@ public class AuthController {
         try {
             String username = loginRequest.getUsername();
 
-            //  Check if the user is completely new (i.e., has no session)
+            //  /Check if the user is completely new (i.e., has no session)
             if (!jwtTokenProvider.hasActiveSession(username)) {
                 System.out.println("🔹 New user detected. Proceeding with normal login.");
                 return authenticateAndGenerateToken(loginRequest);
